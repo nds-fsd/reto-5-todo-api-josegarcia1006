@@ -1,21 +1,41 @@
 const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
 const app = express();
 const todoRouter = require('./routers/todo');
 
 
-//Le decimos a nuestra app, que vamos recibir peticiones donde el Body contiene texto en formato JSON.
-app.use(express.json());
-
-//Le decimos a nuestra app, que "utilize" el router de todos. Esto es equivalente a haber definido todos nuestros endpoints directamente sobre el objeto app como vimos en clase.
-app.use(todoRouter);
-
-//a partir de este punto y gracias a la linea escrita mas arriba, si llega alguna peticion que empieze por /todo, está se redirige hacia todoRouter.
-
-
-
-
-app.listen(3000, () => {
-    console.log("Server is up and running in port 3000");
+mongoose.connect('mongodb://localhost:27017/todoAppDB', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 });
 
+mongoose.connection.on('connected', () => {
+  console.log('Conectado a MongoDB');
+});
 
+mongoose.connection.on('error', (err) => {
+  console.error(`Error al conectar a MongoDB: ${err.message}`);
+});
+
+app.use(cors());
+app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+app.use(todoRouter);
+
+
+process.on('SIGINT', () => {
+  mongoose.connection.close(() => {
+    console.log('Conexión a MongoDB cerrada debido a la terminación de la aplicación');
+    process.exit(0);
+  });
+});
+
+app.listen(3000, () => {
+  console.log('Server is up and running on port 3000');
+});
